@@ -1,0 +1,476 @@
+{
+  "name": "Newsletter_from_subReddits",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 7,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f84aeb8a-d453-4226-872d-158b7dabc667",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "score",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        736,
+        0
+      ],
+      "id": "23f67257-88eb-4a4b-9583-19e6c2b26b56",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from both previous nodes\nconst originalData = $('Extract and Format').first().json;\nconst aiAnalysis = $('AI Agent').first().json.output; // Get the AI analysis text\n\nconst content = originalData.newsletter_content;\nconst postCount = originalData.post_count;\nconst totalUpvotes = originalData.total_upvotes;\nconst totalComments = originalData.total_comments;\nconst subreddit = originalData.subreddit;\nconst date = new Date().toLocaleDateString();\n\nconst htmlNewsletter = `\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <title>FantasyPL Subreddit Newsletter - ${date}</title>\n    <style>\n        /* ... your existing CSS ... */\n        .ai-analysis {\n            background: #fff8f0;\n            padding: 20px;\n            border-radius: 8px;\n            margin-bottom: 30px;\n            border-left: 4px solid #ff6b35;\n        }\n        .ai-analysis h2 {\n            color: #ff6b35;\n            margin-top: 0;\n        }\n        .ai-content {\n            line-height: 1.6;\n            color: #444;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h1>Multi-Subreddit Newsletter</h1>\n            <div class=\"subtitle\">${date} • Top ${postCount} trending posts</div>\n        </div>\n        \n        <div class=\"stats\">\n            <span class=\"stats-item reddit-orange\">${totalUpvotes} Total Upvotes</span>\n            <span class=\"stats-item reddit-orange\">${totalComments} Total Comments</span>\n            <span class=\"stats-item reddit-orange\">${postCount} Posts</span>\n        </div>\n        \n        <div class=\"summary\">\n            <h2 style=\"margin-top: 0;\">Today's Headlines</h2>\n            <ol class=\"headlines-list\">\n${content.split('\\n## ').slice(1).map((section) => {\n  const titleMatch = section.match(/^(\\d+)\\. (.+?)$/m);\n  if (titleMatch) {\n    const title = titleMatch[2];\n    return `                <li>${title}</li>`;\n  }\n  return '';\n}).filter(item => item).join('')}\n            </ol>\n        </div>\n        \n        <div class=\"ai-analysis\">\n            <h2>🧠 AI Fantasy Analysis</h2>\n            <div class=\"ai-content\">\n${aiAnalysis.replace(/\\n/g, '<br>').replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')}\n            </div>\n        </div>\n        \n        <div class=\"content\">\n            <h2 style=\"margin-top: 0;\">Full Posts</h2>\n${content\n  .replace(/## (\\d+)\\. (.*)/g, '<h2>$1. $2</h2>')\n  .replace(/\\*\\*Type:\\*\\* (.*?) \\| \\*\\*Score:\\*\\* (.*?) \\| \\*\\*Comments:\\*\\* (.*?)\\n\\*\\*Author:\\*\\* (.*?) in (.*?)\\n/g, \n    '<div class=\"post-meta\">Type: $1 • Score: $2 • Comments: $3<br>Author: $4 • Subreddit: $5</div>')\n  .replace(/\\[Read full discussion on Reddit\\]\\((.*?)\\)/g, \n    '<a href=\"$1\" class=\"post-link\" target=\"_blank\">Read on Reddit</a>')\n  .replace(/---/g, '<hr>')\n  .replace(/\\n\\n/g, '</div><div class=\"post-content\">')\n}\n        </div>\n        \n        <div class=\"footer\">\n            <p><strong>Generated automatically by N8N Reddit Newsletter Bot</strong></p>\n            <p>Powered by Reddit API • Enhanced with AI Analysis</p>\n        </div>\n    </div>\n</body>\n</html>\n`;\n\nreturn { \n  html_newsletter: htmlNewsletter,\n  subject_line: `Multi-Subreddit Newsletter - ${date} (${postCount} trending posts + AI Analysis)`,\n  preview_text: `${totalUpvotes} upvotes across ${postCount} top posts with AI fantasy insights`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "9bc08854-9838-43da-9bbe-b2b685979101",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "let newsletterContent = '';\nlet postCount = 0;\n\n// Process each Reddit post\nfor (const item of $input.all()) {\n  const post = item.json;\n  postCount++;\n  \n  // Skip if we have enough posts (limit to top 10)\n  if (postCount > 10) break;\n  \n  // Determine post type\n  let postType = 'Discussion';\n  if (post.link_flair_text === 'News') postType = 'News';\n  if (post.link_flair_text === 'Statistics') postType = 'Stats';\n  if (post.title.toLowerCase().includes('injury')) postType = 'Injury Update';\n  if (post.title.toLowerCase().includes('transfer')) postType = 'Transfer News';\n  \n  // Get content preview\n  let content = '';\n  if (post.selftext && post.selftext.length > 0) {\n    content = post.selftext.substring(0, 300);\n    if (post.selftext.length > 300) content += '...';\n  } else if (post.post_hint === 'image') {\n    content = 'Image post - view on Reddit for full content';\n  } else if (post.is_video) {\n    content = 'Video post - view on Reddit to watch';\n  } else {\n    content = 'Link post - click through to Reddit for details';\n  }\n  \n  // Clean up content (remove markdown, HTML)\n  content = content.replace(/&lt;[^&gt;]*&gt;/g, ''); // Remove HTML tags\n  content = content.replace(/\\*\\*/g, ''); // Remove bold markdown\n  content = content.replace(/\\*/g, ''); // Remove italic markdown\n  content = content.replace(/\\n+/g, ' '); // Replace line breaks with spaces\n  content = content.replace(/\\s+/g, ' ').trim(); // Clean up spacing\n  \n  // Format the post\n  newsletterContent += `\n## ${postCount}. ${post.title}\n**Type:** ${postType} | **Score:** ${post.score} upvotes | **Comments:** ${post.num_comments}\n**Author:** u/${post.author} in r/${post.subreddit}\n\n${content}\n\n[Read full discussion on Reddit](https://reddit.com${post.permalink})\n\n---\n\n`;\n}\n\n// Create summary stats\nconst totalUpvotes = $input.all().slice(0, 10).reduce((sum, item) => sum + item.json.score, 0);\nconst totalComments = $input.all().slice(0, 10).reduce((sum, item) => sum + item.json.num_comments, 0);\n\nreturn {\n  newsletter_content: newsletterContent,\n  post_count: postCount,\n  total_upvotes: totalUpvotes,\n  total_comments: totalComments,\n  generated_date: new Date().toISOString(),\n  subreddit: $input.first().json.subreddit\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        0
+      ],
+      "id": "230e50cc-f92c-47d5-b96a-82264568ccea",
+      "name": "Extract and Format"
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "={{ $json.subject_line }}",
+        "message": "={{ $json.html_newsletter }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "7dbdbac0-8caf-4104-86a8-3515613a2fe4",
+      "name": "Send a message",
+      "webhookId": "your-webhook-id",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your-credential-id",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "={{\"FantasyPL\"}}",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        224,
+        48
+      ],
+      "id": "d3e3a17b-47b8-44e8-8515-fa2278134c96",
+      "name": "FantasyPL",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "your-credential-id",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "={{\"PremierFantasy\"}}",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "3367be17-45d6-42e5-afd1-a59e281d1d9d",
+      "name": "PremierLeague",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "your-credential-id",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "e7ea5dae-200d-4d40-bf1c-6a1e80011362",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "07005855-cc47-4eae-a38d-e985efb0bcc2",
+              "leftValue": "=$json.title.toLowerCase()",
+              "rightValue": "\"injury\"",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "0d0aba22-6c67-4f48-b190-4955bb29b087",
+              "leftValue": "=$json.title.toLowerCase()",
+              "rightValue": "\"news\"",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "06c9c265-6137-4b2e-a1e6-48627b6c4614",
+              "leftValue": "=$json.title.toLowerCase()",
+              "rightValue": "\"transfer\"",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8883baad-fe47-4270-b4e9-338dc413be9f",
+              "leftValue": "=$json.link_flair_text",
+              "rightValue": "=\"News\"",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "80b3fb83-4ff2-40da-b135-5845e8f2faf0",
+              "leftValue": "={{ parseInt($json.score) }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "90c67af6-5ce3-4f56-a16b-f1ffa38ed0df",
+              "leftValue": "={{ ($json.selftext || \"\").length }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "cd15fae7-997d-4d1f-a505-5481b6a652a3",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are a fantasy football analyst specializing in Premier League. Analyze trending Reddit posts and provide strategic insights for fantasy managers. Focus on:\n- Immediate impact on player values\n- Transfer recommendations  \n- Gameweek strategy implications\n- Injury/suspension effects on team selection\n\nKeep insights concise and actionable.\n\nToday's date is: {{ $now.format('yyyy-MM-dd')}}\n\nMake sure you assign players to the right clubs.  Use the available tools including web_search_exa.  \n\nThese are the available tools available via the exa mcp server:\n\nweb_search_exa - Performs real-time web searches with optimized results and content extraction\n\ncompany_research - Comprehensive company research tool that crawls company websites to gather detailed information about businesses\n\ncrawling - Extracts content from specific URLs, useful for reading articles, PDFs, or any web page when you have the exact URL\n\nFor deep research tasks, you can use the following MCP tools, where if deep_researcher_check follows a deep_researcher_start call:\n\ndeep_researcher_start (available via exa_mcp_tools) - Start a smart AI researcher for complex questions. The AI will search the web, read many sources, and think deeply about your question to create a detailed research report\n\ndeep_researcher_check (available via deep_research_task subworkflow tool) - Check if your research is ready and get the results. Use this after starting a research task to see if it’s done and get your comprehensive report"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "276c3b81-c71d-4b29-a2cd-eafb6906ac7e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        160
+      ],
+      "id": "d10d0105-b644-4ccd-97ce-00855c773c97",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "your-credential-id",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the clean data from Extract and Format node\nconst data = $input.first().json;\nconst content = data.newsletter_content;\n\n// Use the already-parsed content for AI analysis\nconst analysisPrompt = `As a fantasy football analyst, analyze these trending posts and provide strategic insights:\n\n${content}\n\nFocus on:\n- Key takeaways for fantasy managers\n- Player value implications\n- Transfer recommendations\n- Gameweek strategy impact\nUse tools as needed.\nKeep insights concise and actionable.`;\n\nreturn { \n  chatInput: analysisPrompt,  // Changed from 'analysis_request' to 'chatInput'\n  original_data: data // Pass through the original data\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "116c12a1-dc05-4e6d-bd43-ab9eb606da3c",
+      "name": "Input preparation"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://mcp.exa.ai/mcp?exaApiKey",
+        "serverTransport": "httpStreamable",
+        "authentication": "headerAuth",
+        "include": "except",
+        "excludeTools": [
+          "deep_researcher_check",
+          "linkedin_search_exa"
+        ]
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        160
+      ],
+      "id": "164ac07e-643f-48af-b1d3-0a14e1f5782d",
+      "name": "MCP Client",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "your-credential-id",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-n8n-instance.com/webhook/your-webhook-id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        160
+      ],
+      "id": "1682cab1-df5f-4e47-9009-c1451f1485ac",
+      "name": "deep_researcher_check"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "PremierLeague",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "FantasyPL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Extract and Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract and Format": {
+      "main": [
+        [
+          {
+            "node": "Input preparation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FantasyPL": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "PremierLeague": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input preparation": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deep_researcher_check": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  
+  "meta": {
+    "templateCredsSetupCompleted": false,
+  },
+  "tags": []
+}
