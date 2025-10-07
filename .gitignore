@@ -1,8 +1,26 @@
-# Credentials and secrets
-credentials.json
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Credentials
+credentials.json
+secrets.json
 *.key
+*.pem
 
 # N8N specific
-node_modules/
 .n8n/
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test files
+test-output/
+*.test.json
