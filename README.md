@@ -6,6 +6,8 @@ An automated newsletter generator that aggregates trending posts from multiple s
 
 **[View the Complete Newsletter Example →](https://raym26.github.io/reddit-newsletter-n8n-workflow/example-output.html)**
 
+![Newsletter Preview](newsletter-screenshot.png)
+
 See the bot in action with a real-world example featuring 11 trending posts, engagement stats, and AI-powered fantasy football analysis.
 
 ## Features
