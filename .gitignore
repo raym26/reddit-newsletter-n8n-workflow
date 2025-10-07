@@ -1,0 +1,8 @@
+# Credentials and secrets
+credentials.json
+.env
+*.key
+
+# N8N specific
+node_modules/
+.n8n/
