@@ -4,7 +4,7 @@ An automated newsletter generator that aggregates trending posts from multiple s
 
 ## 📧 Live Newsletter Example
 
-**[View the Complete Newsletter Example →](https://raym26.github.io/reddit-newsletter-n8n-workflow/examples/newsletter-example.html)**
+**[View the Complete Newsletter Example →](https://raym26.github.io/reddit-newsletter-n8n-workflow/example-output.html)**
 
 See the bot in action with a real-world example featuring 11 trending posts, engagement stats, and AI-powered fantasy football analysis.
 
@@ -33,10 +33,8 @@ See the bot in action with a real-world example featuring 11 trending posts, eng
 ## Repository Structure
 
 ```
-reddit-newsletter-bot/
-├── examples/
-│   ├── newsletter-example.html          # Complete HTML newsletter example
-│   └── newsletter-data.json             # Raw data structure
+reddit-newsletter-n8n-workflow/
+├── example-output.html                  # Complete HTML newsletter example
 ├── workflows/
 │   └── reddit-newsletter.json           # N8N workflow configuration
 ├── templates/
@@ -83,7 +81,7 @@ The bot includes intelligent analysis features:
 
 ## Example Newsletter
 
-**[🔗 Live Demo](https://raym26.github.io/reddit-newsletter-n8n-workflow/examples/newsletter-example.html)** | [View Source](examples/newsletter-example.html)
+**[🔗 Live Demo](https://raym26.github.io/reddit-newsletter-n8n-workflow/example-output.html)** | [View Source](example-output.html)
 
 The newsletter includes:
 - Clean, responsive design
